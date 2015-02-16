@@ -1,2 +1,2 @@
-#!/bin/bash
-python -m openmalaria.tools.plotResult $@
+#!/bin/sh
+python2 -m openmalaria.tools.plotResult $@

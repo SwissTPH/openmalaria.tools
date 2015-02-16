@@ -10,7 +10,12 @@
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
+import platform
 from setuptools import setup, find_packages
+
+script_ext = ''
+if platform.system() == 'Windows':
+    script_ext = '.cmd'
 
 setup(
     name="openmalaria.tools",
@@ -25,7 +30,7 @@ setup(
     # If omitted, the source directory defaults to the same directory as the setup script.
     packages=find_packages(),  # https://pythonhosted.org/setuptools/setuptools.html#using-find-packages
     namespace_packages=['openmalaria', ],
-    scripts=['bin/plotResult.cmd'],
+    scripts=['bin/plotResult' + script_ext],
     install_requires=["numpy", "matplotlib", "pyparsing"],
     classifiers=[
         "Development Status :: 3 - Alpha",
