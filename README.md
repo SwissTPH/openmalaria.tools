@@ -7,7 +7,7 @@ It contains scripts for
 * Plotting openmalaria results with _[plotResults.py](openmalaria/tools/plotResult.py)_
 * Generating Schema Documentation from a provided **[schema.xsd](https://github.com/SwissTPH/openmalaria/tree/develop/schema)** with _[generateDoc.py](openmalaria/tools/generateDoc.py)_
 * Read Output files  with _[readOutput.py](openmalaria/tools/readOutput.py)_
-* Reformat XML files with _[reformat_xmls.py](openmalaria/tools/eformat_xmls.py)_
+* Reformat XML files with _[reformat_xmls.py](openmalaria/tools/reformat_xmls.py)_
 * translate XML files with _[translateXML.py](openmalaria/tools/translateXML.py)_
 
 Reasons to implement openmalaria.tools as a separate project from vecnet.openmalaria
