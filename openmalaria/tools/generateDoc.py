@@ -566,6 +566,8 @@ def main():
             w.heading(1, 'Generated Schema Documentation')
             w.line('This documentation was generated with the following command.')
             w.line('Comments welcome but be warned edits will most likely be lost.')
+            w.line('More information about this script: https://github.com/vecnet/openmalaria.tools')
+            w.line('most recent version: [generateDoc.py](https://github.com/vecnet/openmalaria.tools/blob/master/openmalaria/tools/generateDoc.py)')
             w.startcode('sh')
             w.line(' '.join(sys.argv))
             w.endcode()
