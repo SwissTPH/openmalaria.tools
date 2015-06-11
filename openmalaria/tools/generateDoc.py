@@ -121,7 +121,7 @@ class DocWriter:
 def parse_appinfo(text):
     result = {}
     for pair in text.split(';'):
-        parts = pair.split(':', maxsplit=1)
+        parts = pair.split(':',1)
         if len(parts) == 2:
             result[parts[0].strip()] = parts[1].strip()
         else:
