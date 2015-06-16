@@ -34,7 +34,7 @@ import MySQLdb
 import getpass
 
 LATEST_VERSION=33
-KNOWN_VERSIONS=[32,33]    # all valid translation targets
+KNOWN_VERSIONS=[32,33,34]    # all valid translation targets
 
 class DocumentError(Exception):
     """Class for reporting errors in the input document."""
@@ -314,6 +314,9 @@ class Translator:
                             child.append(ET.Element('positive',{'id':comp_id}))
                         for comp_id in negComponents:
                             child.append(ET.Element('negative',{'id':comp_id}))
+
+    def translate_33_to_34(self):
+        pass
     
     def enable_mol5d_pairwise(self):
         """Enable the Molineaux model and pairwise sampling while preserving a
