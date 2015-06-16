@@ -223,6 +223,8 @@ class ComplexType(Node):
                 self.elements.append(elt)
             elif child.tag == xsdpre + 'choice':
                 result.append(('choice', self.read_elts(child)))
+            elif child.tag == xsdpre + 'sequence':
+                result.append(('sequence', self.read_elts(child)))
             else:
                 die('unexpected child of <%s>: <%s>' %(parent.tag, child.tag))
         return result
@@ -293,7 +295,7 @@ class ComplexType(Node):
             mode = node[0]
             if mode == 'all':
                 w.line('| '*depth + 'IN ANY ORDER:')
-            elif mode == 'seq':
+            elif mode == 'seq' or mode == 'sequence':
                 w.line('| '*depth + 'IN THIS ORDER:')
             elif mode == 'choice':
                 w.line('| '*depth + 'EXACTLY ONE OF:')
