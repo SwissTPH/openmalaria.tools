@@ -13,6 +13,7 @@
 from __future__ import print_function
 
 import argparse, sys, os.path, re
+from datetime import date
 #try:
     #import lxml.etree as ET
 #except ImportError:
@@ -91,12 +92,18 @@ class DocWriter:
     def endcode(self):
         self.line('```')
     
-    def head(self, schema_file, ver):
+    def head(self, schema_file, ver, commit):
         # write header
         self.heading(1, 'Generated schema '+ver+' documentation')
         self.line('This page is automatically generated from the following schema file: `'+schema_file+'`.')
         self.line('I recommend against editing it because edits will likely be lost later.')
         self.line()
+        if commit:
+            dt = date.today()
+            datestr='{0}-{1}-{2}'.format(dt.year,dt.month,dt.day)
+            self.line('This state represents a prerelease for schema-'+schema_file+' generated at '+datestr)
+            self.line('of commit ['+commit+'](https://github.com/SwissTPH/openmalaria/commit/'+commit+') in branch _[develop](https://github.com/SwissTPH/openmalaria/tree/develop)_')
+            self.line()
         self.line('Key:')
         self.startcode()
         self.line('    abc             required (one)')
@@ -464,7 +471,7 @@ class FixedAttribute:
     def writedoc(self, w):
         pass
 
-def translate(f_in, f_out, schema_file):
+def translate(f_in, f_out, schema_file, commit=None):
     global nsmap
     global all_links
     all_links=set() # reset
@@ -472,7 +479,7 @@ def translate(f_in, f_out, schema_file):
     m = re.match('scenario[^0-9]*([0-9_]+)', schema_file)
     ver = str(m.group(1)) if m is not None else '??'
     w = DocWriter(f_out)
-    w.head(schema_file, ver)
+    w.head(schema_file, ver, commit)
     
     tree = ET.parse(f_in)
     root = tree.getroot()
@@ -536,6 +543,8 @@ def main():
                         help="Schema file to be translated")
     parser.add_argument('-o','--output', metavar='FILE', action='store',
                         help='File to output to (if not given, output is to stdout')
+    parser.add_argument('-d','--develop', metavar='COMMIT' ,action='store',
+						help='Update new documentation (add comment about pre-released documentation and commit)')
     args = parser.parse_args()
     # args.schema : file to translate
     # args.output : output file
@@ -546,9 +555,9 @@ def main():
             if args.output is not None:
                 linkbase = os.path.splitext(os.path.basename(args.output))[0]
                 with open(args.output, 'w') as f_out:
-                    translate(f_in, f_out, schema_name)
+                    translate(f_in, f_out, schema_name, commit=args.develop)
             else:
-                translate(f_in, sys.stdout, schema_name)
+                translate(f_in, sys.stdout, schema_name, commit=args.develop)
     else:
         assert len(args.schema) > 1
         assert args.output is None or die('cannot use -o / --output option with more than one input file')
