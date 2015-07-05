@@ -221,6 +221,8 @@ class ComplexType(Node):
                 elt = Element(child)
                 result.append(elt)
                 self.elements.append(elt)
+            elif child.tag == xsdpre + 'sequence':
+                result.append(('seq', self.read_elts(child)))
             elif child.tag == xsdpre + 'choice':
                 result.append(('choice', self.read_elts(child)))
             else:
