@@ -316,6 +316,10 @@ class Translator:
                             child.append(ET.Element('negative',{'id':comp_id}))
 
     def translate_33_to_34(self):
+        """
+        TODO: incomplete
+        """
+        print('Warning: translation to version 34 is incomplete; version is not yet finalised.')
         pass
     
     def enable_mol5d_pairwise(self):
