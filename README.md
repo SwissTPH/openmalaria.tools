@@ -16,3 +16,7 @@ Reasons to implement openmalaria.tools as a separate project from vecnet.openmal
 1. openmalaria.tools will have a lot of dependencies on other libraries (lxml, mathlibplot and so on).  vecnet.openmalaria should have as few dependencies as possible - ideally, none.
 1. openmalaria.tools is focused on end users, and do not require any programming to be used. vecnet.openmalaria is a library and is intended to be used by python programmers.
 1. We may have different versioning approaches for vecnet.openmalaria and openmalaria.tools. For example, the tools may have a version number that tracks the newest OM schema version it supports (e.g., OM Toolkit v33.# supports OM versions up to and including version 33).  In contrast, the vecnet.openmalaria library should use semantic versioning, and only change its major version when there's a backward-incompatible change to its API.
+
+## Tool documentation
+
+Some documentation can be found [in the openmalaria wiki](https://github.com/SwissTPH/openmalaria/wiki/UtilsRunScripts).
