@@ -27,7 +27,7 @@ The `plotResults.py` script is a tool to quickly plot standard outputs (not the 
 
 ### Generating documentation
 
-This tool generates a set of wiki pages from XML Schema Documents (XSD). [Here is the output for OpenMalaria schemas.](https://github.com/SwissTPH/openmalaria/wiki/GeneratedSchemaDocIndex)
+This tool generates a set of wiki pages from XML Schema Documents (XSD). [Here is the output for OpenMalaria schemas.](https://github.com/SwissTPH/openmalaria/wiki/schema-Index)
 
 Usage:
 
