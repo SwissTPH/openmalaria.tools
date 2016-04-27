@@ -574,7 +574,7 @@ def main():
             with open(sch_file, 'r') as f_in:
                 with open(linkbase + '.md', 'w') as f_out:
                     translate(f_in, f_out, schema)
-        with open('GeneratedSchemaDocIndex.md', 'w') as f_out:
+        with open('schema-Index.md', 'w') as f_out:
             w = DocWriter(f_out)
             w.heading(1, 'Generated Schema Documentation')
             w.line('This documentation was generated with the following command.')

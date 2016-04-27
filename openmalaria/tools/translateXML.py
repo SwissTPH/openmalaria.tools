@@ -316,7 +316,30 @@ class Translator:
                             child.append(ET.Element('negative',{'id':comp_id}))
 
     def translate_33_to_34(self):
-        pass
+        print('Warning: translation to version 34 is incomplete; version is not yet finalised.')
+        """Version 34 has changes which are incompatible to versions before 33 (Vivax).
+
+        Translated:
+        Vivax:
+                hypnozoiteReleaseDelayDays -> hypnozoiteRelease
+
+        TODO:
+        Vivax pEvent
+        """
+        vivax = self.root.find('model').find('vivax')
+        for child in vivax:
+            if child.tag == 'hypnozoiteReleaseDelayDays'
+                # Translate hynpozoiteReleaseDelayDays into hypnozoiteRelease
+                mu = child.get('mu')
+                sigma = child.get('sigma')
+                # translate min to latentRelapseDays (most similar translation, but not identical)
+                min = child.get('min')
+                # create new hypnozoiteRelease element from attributes
+                h = ET.Element('hypnozoiteRelease',{'latentRelapseDays':min})
+                h.append(vivax.find('numberHypnozoites'))
+                h.append(ET.Element('firstRelease',{'mu':mu,'sigma':sigma})
+                vivax.insert(1,h)
+                vivax.remove(child)
     
     def enable_mol5d_pairwise(self):
         """Enable the Molineaux model and pairwise sampling while preserving a
