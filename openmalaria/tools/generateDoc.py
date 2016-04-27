@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of the openmalaria.tools package.
@@ -9,8 +9,6 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License (MPL), version 2.0.  If a copy of the MPL was not distributed
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-from __future__ import print_function
 
 import argparse, sys, os.path, re
 from datetime import date
@@ -543,6 +541,8 @@ def main():
                         OpenMalaria schema file to a more readable documentation format.""")
     parser.add_argument('schema', metavar='SCHEMA', nargs='+',
                         help="Schema file to be translated")
+    parser.add_argument('-s','--split', action='store_true',
+                        help='Split output into multiple files. The exact split is hard-coded.')
     parser.add_argument('-o','--output', metavar='FILE', action='store',
                         help='File to output to (if not given, output is to stdout')
     parser.add_argument('-d','--develop', metavar='COMMIT' ,action='store',
@@ -556,7 +556,7 @@ def main():
         with open(args.schema[0], 'r') as f_in:
             if args.output is not None:
                 linkbase = os.path.splitext(os.path.basename(args.output))[0]
-                with open(args.output, 'w') as f_out:
+                with open(args.output, 'w', encoding='UTF-8') as f_out:
                     translate(f_in, f_out, schema_name, commit=args.develop)
             else:
                 translate(f_in, sys.stdout, schema_name, commit=args.develop)

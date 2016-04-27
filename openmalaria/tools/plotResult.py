@@ -94,7 +94,12 @@ measureNames = {
     70: 'nPatentByGenotype',
     71: 'logDensByGenotype',
     72: 'nHostDrugConcNonZero',
-    73: 'sumLogDrugConcNonZero'
+    73: 'sumLogDrugConcNonZero',
+    74: 'expectedDirectDeaths',
+    75: 'expectedHospitalDeaths',
+    76: 'expectedIndirectDeaths',
+    77: 'expectedSequelae',
+    78: 'expectedNumSevere'
 }
 
 # List of measure groups. Each includes name, boolean (true if use log scale),
@@ -114,11 +119,11 @@ combinedMeasures = [
     ('treatments',
      [(11, 'first line', 'red'), (12, 'second line', 'purple'), (13, 'hospital', 'orange'), (54, 'antibiotics', 'blue'),
       (63, 'primaquine', 'darkblue')]),
-    ('episodes', [(14, 'UC', 'red'), (15, 'severe', 'orange'), (27, 'NMF', 'blue')]),
-    ('sequelae', [(16, 'all', 'red'), (24, 'hospital', 'orange')]),
-    ('deaths',
-     [(17, 'direct hospital', 'orange'), (18, 'indirect', 'purple'), (19, 'direct', 'red'), (41, 'first day', 'brown'),
-      (42, 'first day hospital', 'green'), (53, 'non-malaria fevers', 'blue')]),
+    ('episodes', [(14, 'UC', 'green'), (15, 'severe', 'orange'), (27, 'NMF', 'blue'), (78, 'expected severe', 'red')]),
+    ('sequelae', [(16, 'all', 'red'), (24, 'hospital', 'orange'), (77, 'expected', 'green')]),
+    ('direct deaths', [(17, 'in-hospital', 'orange'), (19, 'all direct deaths', 'red'), (74, 'expected direct deaths', 'black'),
+                       (75, 'expected in-hospital', 'darkgreen'), (42, 'first day hospital', 'green'), (41, 'first day', 'brown')]),
+    ('indirect deaths', [(18, 'indirect malaria deaths', 'pink'), (53, 'non-malaria fevers', 'blue'), (76, 'expected indirect malaria', 'purple')]),
     ('vaccination doses', [(20, 'EPI', 'green'), (22, 'mass', 'grey')]),
     ('drug doses (MDA/MSAT)', [(25, 'IPT', 'brown'), (52, 'MDA (timed)', 'purple'), (59, 'MDA (cts)', 'pink')]),
     ('infant mortality rate', [(21, 'IMR', 'red')]),
@@ -139,7 +144,7 @@ combinedMeasures = [
     ('intervention deployments', [(67, 'via CM', 'grey')]),
     ('host age', [(68, 'sum', 'darkred')]),
     ('user defined', [(90, '90', 'red'), (91, '91', 'brown'), (92, '92', 'green')]),
-    ('sum log', [(73, 'drug concentration', 'green')])
+    ('sum log', [(73, 'drug concentration', 'green')]),
 ]
 appendMeasureNumber = None
 
