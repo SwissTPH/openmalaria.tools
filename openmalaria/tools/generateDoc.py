@@ -17,36 +17,63 @@ from datetime import date
 #except ImportError:
 import xml.etree.ElementTree as ET
 
-all_links = set()
-def make_link_from_name(name):
-    a = 'elt-' + name
-    global all_links
-    i = 1
-    link = a
-    while True:
-        if not link in all_links:
-            all_links.add(link)
-            return link
-        i += 1
-        link = a + '-' + str(i)
+# document modes:
+DM_NONE = 0
+DM_HEAD = 1
+DM_PARA = 2
+DM_LIST = 3
+DM_CODE = 4
+
+class LinkSet:
+    def __init__(self):
+        self.links = set()
+    """Create a new, unique, link"""
+    def new(self, name):
+        a = 'elt-' + name
+        i = 1
+        link = a
+        while True:
+            if not link in self.links:
+                self.links.add(link)
+                return link
+            i += 1
+            link = a + '-' + str(i)
 
 class DocWriter:
     """Writes formatted text to a file"""
     def __init__(self,f_out):
         self.f = f_out
+        self.mode = DM_NONE
+    
+    """Switches mode, unless same and force=False. Adds a line-break if necessary."""
+    def set_mode(self, mode, force):
+        if not force and mode == self.mode:
+            return
+        # end previous mode:
+        if self.mode == DM_CODE:
+            self.line('```')
+        # line break:
+        if (mode == DM_HEAD and self.mode == DM_LIST) or \
+            (mode == DM_PARA and self.mode in [DM_PARA, DM_LIST]) or \
+            (mode == DM_LIST and self.mode == DM_LIST):
+                self.line()
+        # set new mode:
+        self.mode = mode
     
     """wiki formatting functions: GitHub Markdown"""
     def heading(self, level, text):
+        self.set_mode(DM_HEAD, True)
         """level: 1 is biggest heading, 2 next, 5 smallest"""
-        if level <= 2:
-            self.line(text)
-            char = '=' if level == 1 else '-'
-            self.line(char * max(len(text), 3))
-        else:
-            self.line('#' * level, text)
+        # Markdown allows underlining with = or -, but this is longer so don't do it
+        #if level <= 2:
+            #self.line(text)
+            #char = '=' if level == 1 else '-'
+            #self.line(char * max(len(text), 3))
+        #else:
+        self.line('#' * level, text)
         #self.line('<h'+str(level)+' id="'+text.replace(' ','_')+'">' + text + '</h'+str(level)+'>')
-    def bold(self, text):
-        return '**' + text + '**'
+    
+    """return a link to target using text"""
     def link(self, target, text, internal=True):
         """return text for a link, to be injected into a line"""
         # intended for internal links in HTML documents:
@@ -56,45 +83,64 @@ class DocWriter:
         else:
             target = target
         return '['+text+']('+target+')'
-    def bulleted(self, *args):
-        self.line('*  ', *args)
-    def startcode(self, lang=''):
-        self.line('```' + lang)
-    def endcode(self):
-        self.line('```')
+    """return text wrapped with code to make it bold"""
+    def bold(self, text):
+        return '**' + text + '**'
     
-    def head(self, schema_file, ver, commit):
-        # write header
+    """Write a line, regardless of mode"""
+    def line(self, *args):
+        print(*args, file=self.f)
+    """Write a line of paragraph text. Merges with previous line"""
+    def p(self, *args):
+        self.set_mode(DM_PARA, False)
+        print(*args, file=self.f)
+    """Write a line of paragraph text, with an explicit break. If no args, creates a new paragraph but no extra line."""
+    def pn(self, *args):
+        self.set_mode(DM_PARA, True)
+        if len(args) > 0:
+            print(*args, file=self.f)
+    """write a line of a bulleted list, assuming new if last line wasn't bulleted"""
+    def bulleted(self, *args):
+        self.set_mode(DM_LIST, False)
+        print('* ', *args, file=self.f)
+    """Start a code block, with highlighting for lang"""
+    def startcode(self, lang=''):
+        self.set_mode(DM_CODE, True)
+        print('```'+lang, file=self.f)
+    """Write a line of code. Auto-switches if different from previous mode."""
+    def code(self, *args):
+        if DM_CODE != self.mode:
+            # set new mode:
+            self.line('```')
+            self.mode = DM_CODE
+        print(*args, file=self.f)
+    
+    """write header"""
+    def header(self, schema_file, ver, commit):
         self.heading(1, 'Generated schema '+ver+' documentation')
-        self.line('This page is automatically generated from the following schema file: `'+schema_file+'`.')
-        self.line('I recommend against editing it because edits will likely be lost later.')
-        self.line()
+        self.p('This page is automatically generated from the following schema file: `'+schema_file+'`.')
+        self.p('I recommend against editing it because edits will likely be lost later.')
+        
         if commit:
             dt = date.today()
             datestr='{0}-{1}-{2}'.format(dt.year,dt.month,dt.day)
-            self.line('This state represents a prerelease for schema-'+schema_file+' generated at '+datestr)
-            self.line('of commit ['+commit+'](https://github.com/SwissTPH/openmalaria/commit/'+commit+') in branch _[develop](https://github.com/SwissTPH/openmalaria/tree/develop)_')
-            self.line()
-        self.line('Key:')
-        self.startcode()
-        self.line('    abc             required (one)')
-        self.line('  [ def ]           optional (zero or one)')
-        self.line('  ( ghi )*          any number (zero or more)')
-        self.line('  ( jkl )+          at least one')
-        self.line('  ( mno ){2,inf}    two or more occurrences')
-        self.endcode()
-        #self.line('<wiki:toc max_depth="3"/>')
+            self.pn('This state represents a prerelease for schema-'+schema_file+' generated at '+datestr)
+            self.p('of commit ['+commit+'](https://github.com/SwissTPH/openmalaria/commit/'+commit+') in branch _[develop](https://github.com/SwissTPH/openmalaria/tree/develop)_')
+        
+        self.pn('Key:')
+        self.code('  abc           required (one)')
+        self.code('[ def ]         optional (zero or one)')
+        self.code('( ghi )*        any number (zero or more)')
+        self.code('( jkl )+        at least one')
+        self.code('( mno ){2,inf}  two or more occurrences')
+        #self.p('<wiki:toc max_depth="3"/>')
+    
+    """End the document"""
     def finish(self):
+        # end previous mode
+        self.set_mode(DM_NONE, False)
         # write footer
         pass
-    def line(self, *args):
-        print(*args, file=self.f)
-    def doc(self, name, doc):
-        self.line()
-        self.heading(4, 'Documentation ('+name+')')
-        lines = doc.split('\n')
-        for line in lines:
-            self.line(line.lstrip())
 
 def parse_appinfo(text):
     result = {}
@@ -129,7 +175,13 @@ class XSDType:
         self.name = name
         self.appinfo = {}
         self.doc = None
-    def collect_elements(self, elements, stypes, parent):
+    """
+    elements: output list
+    links: link name generator
+    stypes: schema types
+    parent: element from which this element is visited
+    """
+    def collect_elements(self, elements, links, stypes, parent):
         pass
     def type_spec(self):
         return self.name
@@ -138,7 +190,7 @@ class XSDType:
     def has_attrs(self):
         return False
     def write_elt_spec(self, w):
-        w.line('    ' + self.name)
+        w.code('    ' + self.name)
     def write_doc(self, w, docname):
         pass
 
@@ -220,7 +272,13 @@ class ComplexType(Node):
                 for child2 in child:
                     self.read_child(child2)
     
-    def collect_elements(self, elements, stypes, parent):
+    """
+    elements: output list
+    links: link name generator
+    stypes: schema types
+    parent: element from which this element is visited
+    """
+    def collect_elements(self, elements, links, stypes, parent):
         if hasattr(self, 'base_name'):
             for attr in self.attrs:
                 attr.set_type(stypes)
@@ -229,10 +287,10 @@ class ComplexType(Node):
             else:
                 self.base_type = stypes.get(self.base_name)
                 assert self.base_type is not None or die('unknown type',self.base_name)
-                self.base_type.collect_elements(elements, stypes, parent)
+                self.base_type.collect_elements(elements, links, stypes, parent)
             del self.base_name
         for child in self.elements:
-            child.collect_elements(elements, stypes, parent)
+            child.collect_elements(elements, links, stypes, parent)
     
     def has_attrs(self):
         return len(self.attrs) > 0
@@ -242,23 +300,24 @@ class ComplexType(Node):
             return self.base_type.has_elts()
         return have_elts
     def write_elt_links(self, w):
-        #w.line()
-        #w.heading(3, 'Elements')
         if self.base_type is not None:
             self.base_type.write_elt_links(w)
         for elt in self.elements:
             w.bulleted(w.link(elt.linkname, elt.name))
     def write_doc(self, w, docname):
         if self.doc is not None:
-            w.doc(docname, self.doc)
+            w.heading(4, 'Documentation ('+docname+')')
+            lines = self.doc.split('\n')
+            for line in lines:
+                w.line(line.lstrip())
         if self.base_type is not None:
             self.base_type.write_doc(w, 'base type')
     def write_attr_spec(self, w):
         for attr in self.attrs:
             if attr.use == 'optional' or attr.default:
-                w.line('  [', attr.type_spec(),('] DEFAULT VALUE '+str(attr.default) if attr.default is not None else ']'))
+                w.code('  [', attr.type_spec(),('] DEFAULT VALUE '+str(attr.default) if attr.default is not None else ']'))
             else:
-                w.line('   ', attr.type_spec())
+                w.code('   ', attr.type_spec())
     def write_elt_spec(self, w):
         if self.base_type is not None:
             self.base_type.write_elt_spec(w) #TODO: is this correct?
@@ -269,16 +328,16 @@ class ComplexType(Node):
             symbs = freq_symbs.get(node.occurs, None)
             if symbs is None:
                 symbs = ('(', '){'+str(node.occurs[0])+','+str(node.occurs[1])+'}')
-            w.line('| '*depth + symbs[0], '<' + node.name, '... />', symbs[1])
+            w.code('| '*depth + symbs[0], '<' + node.name, '... />', symbs[1])
         else:
             assert len(node) == 2
             mode = node[0]
             if mode == 'all':
-                w.line('| '*depth + 'IN ANY ORDER:')
+                w.code('| '*depth + 'IN ANY ORDER:')
             elif mode == 'seq' or mode == 'sequence':
-                w.line('| '*depth + 'IN THIS ORDER:')
+                w.code('| '*depth + 'IN THIS ORDER:')
             elif mode == 'choice':
-                w.line('| '*depth + 'EXACTLY ONE OF:')
+                w.code('| '*depth + 'EXACTLY ONE OF:')
             else:
                 assert False
             for child in node[1]:
@@ -343,26 +402,26 @@ class Attribute(Node):
         return rst
     
     def writedoc(self, w):
-        w.line()
         name = self.appinfo.get('name', self.name)
         w.heading(4, name)
         w.startcode('xml')
-        w.line(self.type_spec())
-        w.endcode()
+        w.code(self.type_spec())
         if 'units' in self.appinfo:
-            w.line(w.bold('Units:'), self.appinfo['units'])
+            w.p(w.bold('Units:'), self.appinfo['units'])
         if 'min' in self.appinfo:
-            w.line(w.bold('Min:'), self.appinfo['min'])
+            w.p(w.bold('Min:'), self.appinfo['min'])
         if 'max' in self.appinfo:
-            w.line(w.bold('Max:'), self.appinfo['max'])
+            w.p(w.bold('Max:'), self.appinfo['max'])
         if self.default:
-            w.line(w.bold('Default value:'), self.default)
-            
+            w.p(w.bold('Default value:'), self.default)
+        
         if self.doc is not None:
-            w.line()
+            w.pn()
             lines = self.doc.split('\n')
             for line in lines:
-                w.line(line.lstrip())
+                line = line.lstrip();
+                if len(line) > 0:
+                    w.p(line.lstrip())
 
 class Element(Node):
     """Represent an element type in the schema"""
@@ -374,6 +433,7 @@ class Element(Node):
         maxO = 'inf' if maxO == 'unbounded' else int(maxO)
         self.occurs = (int(node.get('minOccurs', 1)), maxO)
         Node.__init__(self, node)
+        self.linkname = None
     
     def read_child(self, child):
         if child.tag == xsdpre + 'complexType':
@@ -385,48 +445,58 @@ class Element(Node):
     def depth(self):
         return 0 if self.parent is None else 1 + self.parent.depth()
     
-    def collect_elements(self, elements, stypes, parent):
+    """
+    elements: output list
+    links: link name generator
+    stypes: schema types
+    parent: element from which this element is visited
+    """
+    def collect_elements(self, elements, links, stypes, parent):
         if self in elements:
+            # Already in output document; use shortest bread-crumb trail
             if parent.depth() < self.parent.depth():
                 self.parent = parent
+        elif self.linkname is not None:
+            # Already in some other output set
+            pass
         else:
             self.parent = parent
-            self.linkname = make_link_from_name(self.name)
+            self.linkname = links.new(self.name)
             elements.append(self)
             
             if self.elt_type is None:
                 self.elt_type = stypes.get(self.type_name)
             assert self.elt_type is not None or die('type not found:', self.type_name)
-            self.elt_type.collect_elements(elements, stypes, self)
+            self.elt_type.collect_elements(elements, links, stypes, self)
     
     def writedoc(self, w):
-        w.line()
-        w.line()
         w.heading(1, '<a name="'+self.linkname+'"></a> ' + self.appinfo.get('name', self.name))
-        w.line(self.breadcrumb(w, None))
-        w.line()
+        w.p(self.breadcrumb(w, None))
+        
         #w.heading(5, 'specification')
         w.startcode('xml')
         have_attrs = self.elt_type.has_attrs()
         have_elts = self.elt_type.has_elts()
-        w.line('<'+self.name+('' if have_attrs else ('>' if have_elts>0 else '/>')))
+        w.code('<'+self.name+('' if have_attrs else ('>' if have_elts>0 else '/>')))
         if have_attrs:
             self.elt_type.write_attr_spec(w)
-            w.line('  >' if have_elts>0 else '  />')
+            w.code('  >' if have_elts>0 else '  />')
         if have_elts>0:
             self.elt_type.write_elt_spec(w)
-            w.line('</'+self.name+'>')
-        w.endcode()
+            w.code('</'+self.name+'>')
         
+        #w.heading(3, 'Elements')
         if have_elts>1:
             self.elt_type.write_elt_links(w)
         
         if self.doc is not None:
-            w.doc('element', self.doc)
+            w.heading(4, 'Documentation (element)')
+            lines = self.doc.split('\n')
+            for line in lines:
+                w.line(line.lstrip())
         self.elt_type.write_doc(w, 'type')
         
         if have_attrs:
-            w.line()
             w.heading(3, 'Attributes')
             for attr in self.elt_type.attrs:
                 attr.writedoc(w)
@@ -450,17 +520,16 @@ class FixedAttribute:
 
 def translate(f_in, f_out, schema_file, commit=None):
     global nsmap
-    global all_links
-    all_links=set() # reset
     
     m = re.match('scenario[^0-9]*([0-9_]+)', schema_file)
     ver = str(m.group(1)) if m is not None else '??'
-    w = DocWriter(f_out)
-    w.head(schema_file, ver, commit)
     
+    # Read document:
     tree = ET.parse(f_in)
     root = tree.getroot()
     assert root.tag == xsdpre + 'schema'
+    
+    # Get namespace:
     targetns = root.get('targetNamespace')
     ompre = '' if targetns is None else '{' + targetns + '}'
     try:
@@ -471,6 +540,7 @@ def translate(f_in, f_out, schema_file, commit=None):
         if targetns is not None:
             nsmap['om'] = targetns
     
+    # Make a dictionary of types, built-in then custom:
     stypes = {
         xsdpre + 'boolean' : XSDType('boolean'),
         xsdpre + 'int' : XSDType('int'),
@@ -479,6 +549,7 @@ def translate(f_in, f_out, schema_file, commit=None):
         xsdpre + 'double' : XSDType('double'),
         xsdpre + 'string' : XSDType('string')
     }
+    # Also find the OM root element:
     omroot = None
     for child in root:
         if child.tag == xsdpre + 'complexType':
@@ -501,12 +572,16 @@ def translate(f_in, f_out, schema_file, commit=None):
         omroot.elt_type.attrs.append(FixedAttribute(
             'xsi:schemaLocation="http://openmalaria.org/schema/scenario_'+ver+' '+schema_file+'"'))
     
-    elements=[]
-    omroot.collect_elements(elements, stypes, None)
+    # Collect all linked elements into a list, by order visited:
+    elements = []
+    links = LinkSet()
+    omroot.collect_elements(elements, links, stypes, None)
     
+    # Write the output:
+    w = DocWriter(f_out)
+    w.header(schema_file, ver, commit)
     for elt in elements:
         elt.writedoc(w)
-    
     w.finish()
 
 def die(*args):
@@ -564,17 +639,15 @@ def main():
         with open(os.path.join(out_dir, 'schema-index.md'), 'w') as f_out:
             w = DocWriter(f_out)
             w.heading(1, 'Generated Schema Documentation')
-            w.line('This documentation was automatically generated from OpenMalaria schema (XSD) files.')
-            w.line('Comments are welcome but be warned that edits will most likely be lost.')
-            w.line('')
-            w.line('The script used to do this is')
-            w.line('[generateDoc.py](https://github.com/SwissTPH/openmalaria.tools/blob/master/openmalaria/tools/generateDoc.py),')
-            w.line(', found in the [openmalaria.tools repository](https://github.com/SwissTPH/openmalaria.tools).')
-            w.line('The command used to generate this page (after shell-expansion of wild-cards like `*`) is:')
+            w.p('This documentation was automatically generated from OpenMalaria schema (XSD) files.')
+            w.p('Comments are welcome but be warned that edits will most likely be lost.')
+            w.pn('')
+            w.p('The script used to do this is')
+            w.p('[generateDoc.py](https://github.com/SwissTPH/openmalaria.tools/blob/master/openmalaria/tools/generateDoc.py),')
+            w.p(', found in the [openmalaria.tools repository](https://github.com/SwissTPH/openmalaria.tools).')
+            w.p('The command used to generate this page (after shell-expansion of wild-cards like `*`) is:')
             w.startcode('sh')
-            w.line(' '.join(sys.argv))
-            w.endcode()
-            w.line()
+            w.code(' '.join(sys.argv))
             w.heading(2, 'Index')
             for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[1].split('-')))), reverse=True):
                 w.bulleted(w.link(link, schema, internal=False))
