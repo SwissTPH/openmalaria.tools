@@ -25,10 +25,21 @@ DM_LIST = 3
 DM_CODE = 4
 
 class DocElts:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, schema_file, ver):
+        self.schema_file = schema_file
+        self.ver = ver
+        self.docname = 'schema-' + ver
+        self.intervs_docname = self.docname + '-intervs'
         self.elements = []
         self.links = set()
+    """Get the document name"""
+    def name(self, elt):
+        if elt.name == 'interventions':
+            return self.intervs_docname
+        elif elt.parent is None:
+            return self.docname
+        else:
+            return elt.parent.docname
     """Add an element"""
     def add(self, elt):
         self.elements.append(elt)
@@ -43,6 +54,35 @@ class DocElts:
                 return link
             i += 1
             link = a + '-' + str(i)
+    """Write the document"""
+    def write(self, out_dir, commit):
+        (elts, interv_elts) = ([], [])
+        for elt in self.elements:
+            if elt.docname == self.intervs_docname:
+                interv_elts.append(elt)
+            else:
+                elts.append(elt)
+        
+        # Main file:
+        out_path = os.path.join(out_dir, self.docname + '.md')
+        with open(out_path, 'w', encoding='UTF-8') as f_out:
+            w = DocWriter(f_out, self.docname)
+            w.header(self.schema_file, self.ver, None, commit)
+            for elt in elts:
+                elt.writedoc(w)
+            w.finish()
+        
+        # Interventions file:
+        if len(interv_elts) > 0:
+            out_path = os.path.join(out_dir, self.intervs_docname+'.md')
+            with open(out_path, 'w', encoding='UTF-8') as f_out:
+                w = DocWriter(f_out, self.intervs_docname)
+                w.header(self.schema_file, self.ver, 'interventions', commit)
+                for elt in interv_elts:
+                    elt.writedoc(w)
+                w.finish()
+        
+        return self.docname
 
 class DocWriter:
     """Writes formatted text to a file"""
@@ -126,15 +166,15 @@ class DocWriter:
         print(*args, file=self.f)
     
     """write header"""
-    def header(self, schema_file, ver, commit):
-        self.heading(1, 'Generated schema', ver, 'documentation')
+    def header(self, schema_file, ver, filter, commit):
+        self.heading(1, 'Generated schema', ver, 'documentation', ('' if filter is None else '('+filter+')'))
         self.p('This page is automatically generated from the following schema file: `'+schema_file+'`.')
         self.p('I recommend against editing it because edits will likely be lost later.')
         
         if commit:
             dt = date.today()
             datestr='{0}-{1}-{2}'.format(dt.year,dt.month,dt.day)
-            self.pn('This state represents a prerelease for schema-'+schema_file+' generated at '+datestr)
+            self.pn('This state represents a prerelease for schema', schema_file, 'generated at '+datestr)
             self.p('of commit ['+commit+'](https://github.com/SwissTPH/openmalaria/commit/'+commit+') in branch _[develop](https://github.com/SwissTPH/openmalaria/tree/develop)_')
         
         self.pn('Key:')
@@ -441,7 +481,6 @@ class Element(Node):
         maxO = 'inf' if maxO == 'unbounded' else int(maxO)
         self.occurs = (int(node.get('minOccurs', 1)), maxO)
         Node.__init__(self, node)
-        self.linkname = None
     
     def read_child(self, child):
         if child.tag == xsdpre + 'complexType':
@@ -463,13 +502,10 @@ class Element(Node):
             # Already in output document; use shortest bread-crumb trail
             if parent.depth() < self.parent.depth():
                 self.parent = parent
-                self.docname = doc.name
-        elif self.linkname is not None:
-            # Already in some other output set
-            pass
+                self.docname = doc.name(self)
         else:
             self.parent = parent
-            self.docname = doc.name
+            self.docname = doc.name(self)
             self.linkname = doc.new_link(self.name)
             doc.add(self)
             
@@ -527,14 +563,12 @@ class FixedAttribute:
     def writedoc(self, w):
         pass
 
-def translate(f_in, f_out, schema_file, commit=None):
+def translate(in_path, out_dir, schema_name, ver, commit=None):
     global nsmap
     
-    m = re.match('scenario[^0-9]*([0-9_]+)', schema_file)
-    ver = str(m.group(1)) if m is not None else '??'
-    
     # Read document:
-    tree = ET.parse(f_in)
+    with open(in_path, 'r') as f_in:
+        tree = ET.parse(f_in)
     root = tree.getroot()
     assert root.tag == xsdpre + 'schema'
     
@@ -574,23 +608,19 @@ def translate(f_in, f_out, schema_file, commit=None):
         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'))
     if targetns is None: # pre 32
         omroot.elt_type.attrs.append(FixedAttribute(
-            'xsi:noNamespaceSchemaLocation="'+schema_file+'"'))
+            'xsi:noNamespaceSchemaLocation="'+schema_name+'"'))
     else:
         omroot.elt_type.attrs.append(FixedAttribute(
             'xmlns:om="http://openmalaria.org/schema/scenario_' + ver + '"'))
         omroot.elt_type.attrs.append(FixedAttribute(
-            'xsi:schemaLocation="http://openmalaria.org/schema/scenario_'+ver+' '+schema_file+'"'))
+            'xsi:schemaLocation="http://openmalaria.org/schema/scenario_'+ver+' '+schema_name+'"'))
     
     # Collect all linked elements into a list, by order visited:
-    doc = DocElts(schema_file)
+    doc = DocElts(schema_name, ver)
     omroot.collect_elements(doc, stypes, None)
     
-    # Write the output:
-    w = DocWriter(f_out, schema_file)
-    w.header(schema_file, ver, commit)
-    for elt in doc.elements:
-        elt.writedoc(w)
-    w.finish()
+    # Write tthe output:
+    return doc.write(out_dir, commit)
 
 def die(*args):
     print('Error: ', *args, file=sys.stderr)
@@ -614,8 +644,6 @@ def main():
         help='Generate an index')
     parser.add_argument('-O','--out-dir', metavar='OUTDIR', action='store',
         help='Directory to output to. If not given the current directory is used.')
-    parser.add_argument('-m','--rename', metavar=('OLD', 'NEW'), nargs=2, action='store',
-        help='Rename output files relative to input, e.g. --rename old new')
     parser.add_argument('-d','--develop', metavar='COMMIT' ,action='store',
         help='Add a comment that this is a pre-release based on commit COMMIT.')
     args = parser.parse_args()
@@ -629,18 +657,13 @@ def main():
     generated=[]
     for in_path in args.schema:
         in_name = os.path.basename(in_path)
-        if not in_name.endswith('.xsd'):
-            die('Expected schema files to end with .xsd:', in_path)
-        out_name = in_name[0:-4].replace('_', '-')
-        if args.rename is not None:
-            out_name = out_name.replace(args.rename[0], args.rename[1])
-        out_path = os.path.join(out_dir, out_name + '.md')
+        m = re.match('scenario_([0-9_]+).xsd', in_name)
+        assert m is not None or die('Expected schema files to have name scenario_*.xsd')
+        ver = str(m.group(1)).replace('_', '-')
         
-        print('Translating', in_path, '→', out_path, file=sys.stderr)
-        with open(in_path, 'r') as f_in:
-            with open(out_path, 'w', encoding='UTF-8') as f_out:
-                translate(f_in, f_out, in_name, commit=args.develop)
-        generated.append((out_name, out_name))
+        print('Translating', in_path, file=sys.stderr)
+        out_name = translate(in_path, out_dir, in_name, ver, commit=args.develop)
+        generated.append((out_name, in_name))
     
     if args.index:
         # Generate an index:
@@ -657,8 +680,8 @@ def main():
             w.startcode('sh')
             w.code(' '.join(sys.argv))
             w.heading(2, 'Index')
-            for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[1].split('-')))), reverse=True):
-                w.bulleted(w.link(link, None, schema))
+            for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[0].split('-')))), reverse=True):
+                w.bulleted(w.link(link, None, 'Documentation for '+schema))
             w.finish()
 
 if __name__ == "__main__":
