@@ -24,11 +24,16 @@ DM_PARA = 2
 DM_LIST = 3
 DM_CODE = 4
 
-class LinkSet:
-    def __init__(self):
+class DocElts:
+    def __init__(self, name):
+        self.name = name
+        self.elements = []
         self.links = set()
+    """Add an element"""
+    def add(self, elt):
+        self.elements.append(elt)
     """Create a new, unique, link"""
-    def new(self, name):
+    def new_link(self, name):
         a = 'elt-' + name
         i = 1
         link = a
@@ -41,9 +46,10 @@ class LinkSet:
 
 class DocWriter:
     """Writes formatted text to a file"""
-    def __init__(self,f_out):
+    def __init__(self,f_out, docname=None):
         self.f = f_out
         self.mode = DM_NONE
+        self.docname = docname
     
     """Switches mode, unless same and force=False. Adds a line-break if necessary."""
     def set_mode(self, mode, force):
@@ -73,15 +79,19 @@ class DocWriter:
         self.line('#' * level, text)
         #self.line('<h'+str(level)+' id="'+text.replace(' ','_')+'">' + text + '</h'+str(level)+'>')
     
+    """create an anchor"""
+    
     """return a link to target using text"""
-    def link(self, target, text, internal=True):
+    def link(self, docname, internname, text):
         """return text for a link, to be injected into a line"""
-        # intended for internal links in HTML documents:
-        if internal:
-            # compatible with GitHub links:
-            target = '#' + target
+        if docname is None or docname == self.docname:
+            assert internname is not None
+            # intended for internal links in HTML documents, compatible with GitHub:
+            target = '#' + internname
+        elif internname is None:
+            target = docname
         else:
-            target = target
+            target = docname + '#' + internname
         return '['+text+']('+target+')'
     """return text wrapped with code to make it bold"""
     def bold(self, text):
@@ -176,12 +186,11 @@ class XSDType:
         self.appinfo = {}
         self.doc = None
     """
-    elements: output list
-    links: link name generator
+    doc: document to add to
     stypes: schema types
     parent: element from which this element is visited
     """
-    def collect_elements(self, elements, links, stypes, parent):
+    def collect_elements(self, doc, stypes, parent):
         pass
     def type_spec(self):
         return self.name
@@ -273,12 +282,11 @@ class ComplexType(Node):
                     self.read_child(child2)
     
     """
-    elements: output list
-    links: link name generator
+    doc: document to add to
     stypes: schema types
     parent: element from which this element is visited
     """
-    def collect_elements(self, elements, links, stypes, parent):
+    def collect_elements(self, doc, stypes, parent):
         if hasattr(self, 'base_name'):
             for attr in self.attrs:
                 attr.set_type(stypes)
@@ -287,10 +295,10 @@ class ComplexType(Node):
             else:
                 self.base_type = stypes.get(self.base_name)
                 assert self.base_type is not None or die('unknown type',self.base_name)
-                self.base_type.collect_elements(elements, links, stypes, parent)
+                self.base_type.collect_elements(doc, stypes, parent)
             del self.base_name
         for child in self.elements:
-            child.collect_elements(elements, links, stypes, parent)
+            child.collect_elements(doc, stypes, parent)
     
     def has_attrs(self):
         return len(self.attrs) > 0
@@ -303,7 +311,7 @@ class ComplexType(Node):
         if self.base_type is not None:
             self.base_type.write_elt_links(w)
         for elt in self.elements:
-            w.bulleted(w.link(elt.linkname, elt.name))
+            w.bulleted(w.link(elt.docname, elt.linkname, elt.name))
     def write_doc(self, w, docname):
         if self.doc is not None:
             w.heading(4, 'Documentation ('+docname+')')
@@ -446,28 +454,29 @@ class Element(Node):
         return 0 if self.parent is None else 1 + self.parent.depth()
     
     """
-    elements: output list
-    links: link name generator
+    doc: document to add to
     stypes: schema types
     parent: element from which this element is visited
     """
-    def collect_elements(self, elements, links, stypes, parent):
-        if self in elements:
+    def collect_elements(self, doc, stypes, parent):
+        if self in doc.elements:
             # Already in output document; use shortest bread-crumb trail
             if parent.depth() < self.parent.depth():
                 self.parent = parent
+                self.docname = doc.name
         elif self.linkname is not None:
             # Already in some other output set
             pass
         else:
             self.parent = parent
-            self.linkname = links.new(self.name)
-            elements.append(self)
+            self.docname = doc.name
+            self.linkname = doc.new_link(self.name)
+            doc.add(self)
             
             if self.elt_type is None:
                 self.elt_type = stypes.get(self.type_name)
             assert self.elt_type is not None or die('type not found:', self.type_name)
-            self.elt_type.collect_elements(elements, links, stypes, self)
+            self.elt_type.collect_elements(doc, stypes, self)
     
     def writedoc(self, w):
         w.heading(1, '<a name="'+self.linkname+'"></a> ' + self.appinfo.get('name', self.name))
@@ -504,7 +513,7 @@ class Element(Node):
     def breadcrumb(self, w, parent):
         parent = self.parent if parent is None else parent
         r = '→ ' if parent is None else parent.breadcrumb(w, None) + ' → '
-        return r + w.link(self.linkname, self.name)
+        return r + w.link(self.docname, self.linkname, self.name)
 
 class FixedAttribute:
     def __init__(self, string):
@@ -573,14 +582,13 @@ def translate(f_in, f_out, schema_file, commit=None):
             'xsi:schemaLocation="http://openmalaria.org/schema/scenario_'+ver+' '+schema_file+'"'))
     
     # Collect all linked elements into a list, by order visited:
-    elements = []
-    links = LinkSet()
-    omroot.collect_elements(elements, links, stypes, None)
+    doc = DocElts(schema_file)
+    omroot.collect_elements(doc, stypes, None)
     
     # Write the output:
-    w = DocWriter(f_out)
+    w = DocWriter(f_out, schema_file)
     w.header(schema_file, ver, commit)
-    for elt in elements:
+    for elt in doc.elements:
         elt.writedoc(w)
     w.finish()
 
@@ -650,7 +658,7 @@ def main():
             w.code(' '.join(sys.argv))
             w.heading(2, 'Index')
             for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[1].split('-')))), reverse=True):
-                w.bulleted(w.link(link, schema, internal=False))
+                w.bulleted(w.link(link, None, schema))
             w.finish()
 
 if __name__ == "__main__":
