@@ -17,8 +17,6 @@ from datetime import date
 #except ImportError:
 import xml.etree.ElementTree as ET
 
-linkbase='PLACEHOLDER' # note: if not specifying an output file, links will not work (Google Code wiki only)
-
 all_links = set()
 def make_link_from_name(name):
     a = 'elt-' + name
@@ -36,31 +34,6 @@ class DocWriter:
     """Writes formatted text to a file"""
     def __init__(self,f_out):
         self.f = f_out
-    
-    #"""wiki formatting functions: Google Code wiki"""
-    #def heading(self, level, *title):
-        #"""level: 1 is biggest heading, 2 next, 5 smallest"""
-        #tag = "=" * level
-        #args=[tag]
-        #args.extend(title)
-        #args.append(tag)
-        #self.line(*args)
-    #def bold(self, text):
-        #return '*' + text + '*'
-    #def link(self, target, text, internal=True):
-        #"""return text for a link, to be injected into a line"""
-        ## Format compatible with Google wiki:
-        #if internal:
-            #target = linkbase + '#' + target
-        #else:
-            #target = target
-        #return '['+target+' '+text+']'
-    #def bulleted(self, *args):
-        #self.line('  *', *args)
-    #def startcode(self):
-        #self.line('{{{')
-    #def endcode(self):
-        #self.line('}}}')
     
     """wiki formatting functions: GitHub Markdown"""
     def heading(self, level, text):
@@ -323,9 +296,13 @@ class Attribute(Node):
             if self.use is None:
                 print('Warning: attribute',node.get('name'),\
                     'does not specify use or default; assuming optional', file=sys.stderr)
-                use = 'optional'
+                self.use = 'optional'
+            elif self.use == 'optional':
+                print('Note: attribute', node.get('name'),\
+                    'does not need to specify use="optional" in addition to default="..."', file=sys.stderr)
             else:
-                die('attribute must not specify use and default:', node.attrib)
+                print('Warning: attribute', node.get('name'),\
+                    'specifies default="..." even though use="required"', file=sys.stderr)
         self.type_name = replace_pre(node.get('type')) # None if no 'type' attr
         Node.__init__(self, node)
     
@@ -536,57 +513,70 @@ def die(*args):
     print('Error: ', *args, file=sys.stderr)
     sys.exit(1)
 
+def maybe_to_int(x):
+    try:
+        return int(x)
+    except:
+        return x
+
 def main():
-    parser = argparse.ArgumentParser(description="""This tool converts an
-                        OpenMalaria schema file to a more readable documentation format.""")
+    # parse command-line arguments
+    parser = argparse.ArgumentParser(description="""This tool converts one or more
+        OpenMalaria schema files to a more readable documentation format.""")
     parser.add_argument('schema', metavar='SCHEMA', nargs='+',
-                        help="Schema file to be translated")
+        help="Schema file to be translated")
     parser.add_argument('-s','--split', action='store_true',
-                        help='Split output into multiple files. The exact split is hard-coded.')
-    parser.add_argument('-o','--output', metavar='FILE', action='store',
-                        help='File to output to (if not given, output is to stdout')
+        help='Split output into multiple files. The exact split is hard-coded.')
+    parser.add_argument('-i','--index', action='store_true',
+        help='Generate an index')
+    parser.add_argument('-O','--out-dir', metavar='OUTDIR', action='store',
+        help='Directory to output to. If not given the current directory is used.')
+    parser.add_argument('-m','--rename', metavar=('OLD', 'NEW'), nargs=2, action='store',
+        help='Rename output files relative to input, e.g. --rename old new')
     parser.add_argument('-d','--develop', metavar='COMMIT' ,action='store',
-						help='Update new documentation (add comment about pre-released documentation and commit)')
+        help='Add a comment that this is a pre-release based on commit COMMIT.')
     args = parser.parse_args()
-    # args.schema : file to translate
-    # args.output : output file
-    global linkbase
-    if len(args.schema) == 1:
-        schema_name = os.path.basename(args.schema[0])
-        with open(args.schema[0], 'r') as f_in:
-            if args.output is not None:
-                linkbase = os.path.splitext(os.path.basename(args.output))[0]
-                with open(args.output, 'w', encoding='UTF-8') as f_out:
-                    translate(f_in, f_out, schema_name, commit=args.develop)
-            else:
-                translate(f_in, sys.stdout, schema_name, commit=args.develop)
-    else:
-        assert len(args.schema) > 1
-        assert args.output is None or die('cannot use -o / --output option with more than one input file')
-        generated=[]
-        for sch_file in args.schema:
-            print('Reading',sch_file,'...', file=sys.stderr)
-            schema = os.path.basename(sch_file)
-            m = re.match('scenario_([0-9_]+)\.xsd', schema)
-            assert m is not None or die('Schema file name does not match regular expression:',schema)
-            linkbase = 'GeneratedSchema'+str(m.group(1))+'Doc'
-            generated.append((linkbase,schema))
-            with open(sch_file, 'r') as f_in:
-                with open(linkbase + '.md', 'w') as f_out:
-                    translate(f_in, f_out, schema)
-        with open('schema-Index.md', 'w') as f_out:
+    
+    out_dir = '.' if args.out_dir is None else args.out_dir
+    if not os.path.isdir(out_dir):
+        die('Output directory doesn\'t exist (or isn\'t a directory):',out_dir)
+    # why __rename not rename?
+    
+    # Translate files
+    generated=[]
+    for in_path in args.schema:
+        in_name = os.path.basename(in_path)
+        if not in_name.endswith('.xsd'):
+            die('Expected schema files to end with .xsd:', in_path)
+        out_name = in_name[0:-4].replace('_', '-')
+        if args.rename is not None:
+            out_name = out_name.replace(args.rename[0], args.rename[1])
+        out_path = os.path.join(out_dir, out_name + '.md')
+        
+        print('Translating', in_path, '→', out_path, file=sys.stderr)
+        with open(in_path, 'r') as f_in:
+            with open(out_path, 'w', encoding='UTF-8') as f_out:
+                translate(f_in, f_out, in_name, commit=args.develop)
+        generated.append((out_name, out_name))
+    
+    if args.index:
+        # Generate an index:
+        with open(os.path.join(out_dir, 'schema-index.md'), 'w') as f_out:
             w = DocWriter(f_out)
             w.heading(1, 'Generated Schema Documentation')
-            w.line('This documentation was generated with the following command.')
-            w.line('Comments welcome but be warned edits will most likely be lost.')
-            w.line('More information about this script: https://github.com/vecnet/openmalaria.tools')
-            w.line('most recent version: [generateDoc.py](https://github.com/vecnet/openmalaria.tools/blob/master/openmalaria/tools/generateDoc.py)')
+            w.line('This documentation was automatically generated from OpenMalaria schema (XSD) files.')
+            w.line('Comments are welcome but be warned that edits will most likely be lost.')
+            w.line('')
+            w.line('The script used to do this is')
+            w.line('[generateDoc.py](https://github.com/SwissTPH/openmalaria.tools/blob/master/openmalaria/tools/generateDoc.py),')
+            w.line(', found in the [openmalaria.tools repository](https://github.com/SwissTPH/openmalaria.tools).')
+            w.line('The command used to generate this page (after shell-expansion of wild-cards like `*`) is:')
             w.startcode('sh')
             w.line(' '.join(sys.argv))
             w.endcode()
             w.line()
             w.heading(2, 'Index')
-            for link, schema in generated:
+            for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[1].split('-')))), reverse=True):
                 w.bulleted(w.link(link, schema, internal=False))
             w.finish()
 
