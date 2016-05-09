@@ -67,7 +67,7 @@ class DocWriter:
         self.mode = mode
     
     """wiki formatting functions: GitHub Markdown"""
-    def heading(self, level, text):
+    def heading(self, level, *args):
         self.set_mode(DM_HEAD, True)
         """level: 1 is biggest heading, 2 next, 5 smallest"""
         # Markdown allows underlining with = or -, but this is longer so don't do it
@@ -76,11 +76,11 @@ class DocWriter:
             #char = '=' if level == 1 else '-'
             #self.line(char * max(len(text), 3))
         #else:
-        self.line('#' * level, text)
-        #self.line('<h'+str(level)+' id="'+text.replace(' ','_')+'">' + text + '</h'+str(level)+'>')
+        self.line('#' * level, *args)
     
-    """create an anchor"""
-    
+    """return an anchor"""
+    def anchor(self, name):
+        return '<a name="'+name+'"></a>'
     """return a link to target using text"""
     def link(self, docname, internname, text):
         """return text for a link, to be injected into a line"""
@@ -127,7 +127,7 @@ class DocWriter:
     
     """write header"""
     def header(self, schema_file, ver, commit):
-        self.heading(1, 'Generated schema '+ver+' documentation')
+        self.heading(1, 'Generated schema', ver, 'documentation')
         self.p('This page is automatically generated from the following schema file: `'+schema_file+'`.')
         self.p('I recommend against editing it because edits will likely be lost later.')
         
@@ -479,7 +479,7 @@ class Element(Node):
             self.elt_type.collect_elements(doc, stypes, self)
     
     def writedoc(self, w):
-        w.heading(1, '<a name="'+self.linkname+'"></a> ' + self.appinfo.get('name', self.name))
+        w.heading(1, w.anchor(self.linkname), self.appinfo.get('name', self.name))
         w.p(self.breadcrumb(w, None))
         
         #w.heading(5, 'specification')
