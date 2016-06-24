@@ -185,6 +185,17 @@ class DocWriter:
         self.code('( mno ){2,inf}  two or more occurrences')
         #self.p('<wiki:toc max_depth="3"/>')
     
+    """Write appinfo"""
+    def appinfo(self, appinfo):
+        if 'units' in appinfo:
+            self.p(self.bold('Units:'), appinfo['units'])
+        if 'min' in appinfo:
+            self.p(self.bold('Min:'), appinfo['min'])
+        if 'max' in appinfo:
+            self.p(self.bold('Max:'), appinfo['max'])
+        #TODO: maybe also print any other items, excluding name? There shouldn't be any...
+        self.pn()
+    
     """End the document"""
     def finish(self):
         # end previous mode
@@ -355,6 +366,7 @@ class ComplexType(Node):
     def write_doc(self, w, docname):
         if self.doc is not None:
             w.heading(4, 'Documentation ('+docname+')')
+            w.appinfo(self.appinfo)
             lines = self.doc.split('\n')
             for line in lines:
                 w.line(line.lstrip())
@@ -454,12 +466,7 @@ class Attribute(Node):
         w.heading(4, name)
         w.startcode('xml')
         w.code(self.type_spec())
-        if 'units' in self.appinfo:
-            w.p(w.bold('Units:'), self.appinfo['units'])
-        if 'min' in self.appinfo:
-            w.p(w.bold('Min:'), self.appinfo['min'])
-        if 'max' in self.appinfo:
-            w.p(w.bold('Max:'), self.appinfo['max'])
+        w.appinfo(self.appinfo)
         if self.default:
             w.p(w.bold('Default value:'), self.default)
         
@@ -515,6 +522,9 @@ class Element(Node):
             self.elt_type.collect_elements(doc, stypes, self)
     
     def writedoc(self, w):
+        if self.name == "half_life":
+            print("half_life element has type", self.elt_type, ", appinfo: ", self.appinfo)
+        
         w.heading(1, w.anchor(self.linkname), self.appinfo.get('name', self.name))
         w.p(self.breadcrumb(w, None))
         
@@ -536,6 +546,7 @@ class Element(Node):
         
         if self.doc is not None:
             w.heading(4, 'Documentation (element)')
+            w.appinfo(self.appinfo)
             lines = self.doc.split('\n')
             for line in lines:
                 w.line(line.lstrip())
