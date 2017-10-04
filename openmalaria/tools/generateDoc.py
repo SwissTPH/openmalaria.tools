@@ -249,6 +249,10 @@ class XSDType:
         return 1        # we don't have child elts but we do have a type
     def has_attrs(self):
         return False
+    def write_attr_spec(self, w):
+        pass
+    def write_attr_doc(self, w):
+        pass
     def write_elt_spec(self, w):
         w.code('    ' + self.name)
     def write_doc(self, w, docname):
@@ -373,14 +377,21 @@ class ComplexType(Node):
         if self.base_type is not None:
             self.base_type.write_doc(w, 'base type')
     def write_attr_spec(self, w):
+        if self.base_type is not None:
+            self.base_type.write_attr_spec(w)
         for attr in self.attrs:
             if attr.use == 'optional' or attr.default:
                 w.code('  [', attr.type_spec(),('] DEFAULT VALUE '+str(attr.default) if attr.default is not None else ']'))
             else:
                 w.code('   ', attr.type_spec())
+    def write_attr_doc(self, w):
+        if self.base_type is not None:
+            self.base_type.write_attr_doc(w)
+        for attr in self.attrs:
+            attr.writedoc(w)
     def write_elt_spec(self, w):
         if self.base_type is not None:
-            self.base_type.write_elt_spec(w) #TODO: is this correct?
+            self.base_type.write_elt_spec(w)
         elif self.children is not None and self.children != 'simple':
             self.write_elt_rec(self.children, w, 0)
     def write_elt_rec(self, node, w, depth):
@@ -554,8 +565,7 @@ class Element(Node):
         
         if have_attrs:
             w.heading(3, 'Attributes')
-            for attr in self.elt_type.attrs:
-                attr.writedoc(w)
+            self.elt_type.write_attr_doc(w)
     
     def breadcrumb(self, w, parent):
         parent = self.parent if parent is None else parent
@@ -668,7 +678,7 @@ def main():
     generated=[]
     for in_path in args.schema:
         in_name = os.path.basename(in_path)
-        m = re.match('scenario_([0-9_]+).xsd', in_name)
+        m = re.match('scenario_([0-9a-zA-Z_]+).xsd', in_name)
         assert m is not None or die('Expected schema files to have name scenario_*.xsd')
         ver = str(m.group(1)).replace('_', '-')
         
@@ -691,6 +701,7 @@ def main():
             w.startcode('sh')
             w.code(' '.join(sys.argv))
             w.heading(2, 'Index')
+            #TODO: instead of linking generated doc, we should search for everything matching schema-*.md
             for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[0].split('-')))), reverse=True):
                 w.bulleted(w.link(link, None, 'Documentation for '+schema))
             w.finish()
