@@ -29,17 +29,15 @@ class DocElts:
         self.schema_file = schema_file
         self.ver = ver
         self.docname = 'schema-' + ver
-        self.intervs_docname = self.docname + '-intervs'
+        self.subdocs = { 'interventions' : self.docname + '-intervs', 'human' : self.docname + '-human' }
         self.elements = []
         self.links = set()
     """Get the document name"""
     def name(self, elt):
-        if elt.name == 'interventions':
-            return self.intervs_docname
-        elif elt.parent is None:
+        if elt.parent is None:
             return self.docname
         else:
-            return elt.parent.docname
+            return self.subdocs.get(elt.name, elt.parent.docname)
     """Add an element"""
     def add(self, elt):
         self.elements.append(elt)
@@ -56,29 +54,20 @@ class DocElts:
             link = a + '-' + str(i)
     """Write the document"""
     def write(self, out_dir, commit):
-        (elts, interv_elts) = ([], [])
+        elt_dict = dict()
         for elt in self.elements:
-            if elt.docname == self.intervs_docname:
-                interv_elts.append(elt)
-            else:
-                elts.append(elt)
+            elts = elt_dict.setdefault(elt.docname, [])
+            elts.append(elt)
         
-        # Main file:
-        out_path = os.path.join(out_dir, self.docname + '.md')
-        with open(out_path, 'w', encoding='UTF-8') as f_out:
-            w = DocWriter(f_out, self.docname)
-            w.header(self.schema_file, self.ver, None, commit)
-            for elt in elts:
-                elt.writedoc(w)
-            w.finish()
+        subdocs_rev = {v: k for k, v in self.subdocs.items()}
         
-        # Interventions file:
-        if len(interv_elts) > 0:
-            out_path = os.path.join(out_dir, self.intervs_docname+'.md')
+        for docname, elts in elt_dict.items():
+            out_path = os.path.join(out_dir, docname + '.md')
             with open(out_path, 'w', encoding='UTF-8') as f_out:
-                w = DocWriter(f_out, self.intervs_docname)
-                w.header(self.schema_file, self.ver, 'interventions', commit)
-                for elt in interv_elts:
+                w = DocWriter(f_out, docname)
+                filter = subdocs_rev.get(docname, None)
+                w.header(self.schema_file, self.ver, filter, commit)
+                for elt in elts:
                     elt.writedoc(w)
                 w.finish()
         
