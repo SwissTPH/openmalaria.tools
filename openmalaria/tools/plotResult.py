@@ -185,7 +185,7 @@ def getMeasureColour(mg, m):
 
 def ensureUnique(colour, used):
     if colour in used:
-        colours = cnames.keys()
+        colours = list(cnames.keys())
         i = 0
         while colours[i] != colour:
             i += 1
@@ -375,7 +375,7 @@ class Plotter(object):
                 else:
                     measureGroups[mg] = list([m])
             # note: here "measure" is used to represent "measure group"
-            MultiKey.expand(plots, MultiKey.fromMeasureGroups(measureGroups.keys()))
+            MultiKey.expand(plots, MultiKey.fromMeasureGroups(list(measureGroups.keys())))
         else:
             MultiKey.expand(plots, MultiKey.fromMeasures(self.values.getMeasures()))
         if s == "plot":
@@ -488,11 +488,11 @@ class Plotter(object):
                     colour = ensureUnique(getMeasureColour(pLine.mg, pLine.m), lineColours)
                     try:
                         plotted.append(subplot.plot(x, y, colour))
-                    except ValueError, e:
+                    except ValueError as e:
                         print("Bad plot values (script error):")
-                        print("x:", x)
-                        print("y:", y)
-                        print("colour:", colour)
+                        print(("x:", x))
+                        print(("y:", y))
+                        print(("colour:", colour))
 
                 if self.showLegends and (am or len(plotted) > 1):
                     plots = [p[0] for p in plotted]
@@ -558,11 +558,11 @@ class Plotter(object):
                                     ytop[i] += y[i]
                             xsubincr += subwidth
                             plotted.append(lastPlotted)
-                        except ValueError, e:
+                        except ValueError as e:
                             print("Bad plot values (script error):")
-                            print("x:", xind + xincr)
-                            print("y:", y)
-                            print("ytop:", ytop)
+                            print(("x:", xind + xincr))
+                            print(("y:", y))
+                            print(("ytop:", ytop))
 
                     if am:
                         message = pLine.label(plot, self.values)
