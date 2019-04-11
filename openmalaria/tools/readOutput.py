@@ -144,7 +144,7 @@ class ValDict (object):
         def filterFun(f,m,s,g,c,gt):
             r=eval(filterExpr)
             if exprDebug:
-                print "f="+str(f),"m="+str(m),"s="+str(s),"g="+str(g),"c="+str(c),"g="+str(g)+":",r
+                print("f="+str(f),"m="+str(m),"s="+str(s),"g="+str(g),"c="+str(c),"g="+str(g)+":",r)
             return r
         aKS = Keys.SURVEY in self.aggregateKeys
         aKG = Keys.GROUP in self.aggregateKeys
@@ -161,8 +161,8 @@ class ValDict (object):
         for line in fileObj:
             items=string.split(line)
             if (len(items) != 4):
-                print "expected 4 items on line; found (following line):"
-                print line
+                print("expected 4 items on line; found (following line):")
+                print(line)
                 nErrs+=1
                 if nErrs>5:
                     raise Exception ("Too many errors reading "+fileName)
@@ -275,8 +275,8 @@ def readEntries (fname):
     for line in fileObj:
         items=string.split(line)
         if (len(items) != 4):
-            print "expected 4 items on line; found (following line):"
-            print line
+            print("expected 4 items on line; found (following line):")
+            print(line)
             continue
             
         key=Multi3Keys(int(items[2]),int(items[0]),int(items[1]))

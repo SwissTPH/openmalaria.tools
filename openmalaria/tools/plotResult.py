@@ -489,10 +489,10 @@ class Plotter(object):
                     try:
                         plotted.append(subplot.plot(x, y, colour))
                     except ValueError, e:
-                        print "Bad plot values (script error):"
-                        print "x:", x
-                        print "y:", y
-                        print "colour:", colour
+                        print("Bad plot values (script error):")
+                        print("x:", x)
+                        print("y:", y)
+                        print("colour:", colour)
 
                 if self.showLegends and (am or len(plotted) > 1):
                     plots = [p[0] for p in plotted]
@@ -559,10 +559,10 @@ class Plotter(object):
                             xsubincr += subwidth
                             plotted.append(lastPlotted)
                         except ValueError, e:
-                            print "Bad plot values (script error):"
-                            print "x:", xind + xincr
-                            print "y:", y
-                            print "ytop:", ytop
+                            print("Bad plot values (script error):")
+                            print("x:", xind + xincr)
+                            print("y:", y)
+                            print("ytop:", ytop)
 
                     if am:
                         message = pLine.label(plot, self.values)
@@ -655,7 +655,7 @@ genotype, file will be assigned to the x-axis.""", version="%prog 0.1")
         elif options.f == "none":
             options.f = "x-axis"
         else:
-            print "Error: nothing assigned to x-axis!"
+            print("Error: nothing assigned to x-axis!")
             return 1
 
     keys = set()
