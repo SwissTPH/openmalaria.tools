@@ -10,7 +10,6 @@
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import string
 import unittest
 
 class Keys:
@@ -159,7 +158,7 @@ class ValDict (object):
         fileObj = open(fileName, 'r')
         nErrs=0
         for line in fileObj:
-            items=string.split(line)
+            items=line.split()
             if (len(items) != 4):
                 print("expected 4 items on line; found (following line):")
                 print(line)
@@ -273,7 +272,7 @@ def readEntries (fname):
     values=dict()
     fileObj = open(fname, 'r')
     for line in fileObj:
-        items=string.split(line)
+        items=line.split()
         if (len(items) != 4):
             print("expected 4 items on line; found (following line):")
             print(line)
