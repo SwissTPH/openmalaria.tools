@@ -397,6 +397,7 @@ class Plotter(object):
         d2 = int(math.ceil(float(n) / float(d1)))
 
         fig = plt.figure(1)
+        plt.rcParams.update({'font.size': 6})
         plotNumber = 1
         for plot in plots:
             subplot = fig.add_subplot(d1, d2, plotNumber)
@@ -497,7 +498,7 @@ class Plotter(object):
                 if self.showLegends and (am or len(plotted) > 1):
                     plots = [p[0] for p in plotted]
                     legends = [pLine.label(plot, self.values) for pLine in pLines]
-                    subplot.legend(plots, legends, 'upper right')
+                    subplot.legend(legends, loc=1)
             else:  # one x-coord or non-numeric x-coords: draw a bar chart
                 plotted = list()
                 firstLine = None
@@ -591,7 +592,8 @@ class Plotter(object):
                 if self.showLegends and (am or len(plotted) > 1):
                     legends = [block.label(firstLine, self.values) for block in firstStack]
                     subplot.legend(plots, legends, 'upper right')
-
+        
+        plt.tight_layout()
         plt.show()
 
 
