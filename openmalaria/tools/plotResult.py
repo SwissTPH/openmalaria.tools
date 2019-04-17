@@ -396,7 +396,7 @@ class Plotter(object):
         d1 = int(math.ceil(math.sqrt(float(n))))
         d2 = int(math.ceil(float(n) / float(d1)))
 
-        fig = plt.figure(1)
+        fig = plt.figure(1, figsize=(10,8))
         plt.rcParams.update({'font.size': 6})
         plotNumber = 1
         for plot in plots:
