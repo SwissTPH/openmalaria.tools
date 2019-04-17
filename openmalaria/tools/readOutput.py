@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # This file is part of the openmalaria.tools package.
 # For copyright and licensing information about this package, see the
