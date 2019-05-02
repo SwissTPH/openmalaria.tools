@@ -11,7 +11,7 @@
 
 
 import unittest
-from io import StringIO
+from io import StringIO, BytesIO
 
 class Keys:
     NONE=0
@@ -156,8 +156,8 @@ class ValDict (object):
             self.files.append(fileName)
         else:
             fID = 0
-
-        if type(fileName) == StringIO:
+        
+        if type(fileName) == StringIO or type(fileName) == BytesIO:
             fileObj = fileName
         else:
             #give the existing approach a shot
