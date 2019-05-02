@@ -11,6 +11,7 @@
 
 
 import unittest
+from io import StringIO
 
 class Keys:
     NONE=0
@@ -155,7 +156,12 @@ class ValDict (object):
             self.files.append(fileName)
         else:
             fID = 0
-        fileObj = open(fileName, 'r')
+
+        if type(fileName) == StringIO:
+            fileObj = fileName
+        else:
+            #give the existing approach a shot
+            fileObj = open(fileName, 'r')
         nErrs=0
         for line in fileObj:
             items=line.split()
