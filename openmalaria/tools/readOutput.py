@@ -176,9 +176,9 @@ class ValDict (object):
             m=int(items[2])
             s=int(items[0])
             g=int(items[1])
-            gt = g / 1000000 # genotype
+            gt = g // 1000000 # genotype
             g = g - 1000000*gt
-            c = g / 1000   # cohort
+            c = g // 1000   # cohort
             g = g - 1000*c
             if not filterFun(fileName,m,s,g,c,gt):
                 continue
