@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # This file is part of the openmalaria.tools package.
 # For copyright and licensing information about this package, see the
@@ -10,8 +10,8 @@
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import string
 import unittest
+from io import StringIO, BytesIO
 
 class Keys:
     NONE=0
@@ -62,14 +62,14 @@ class TestMultiKeys (unittest.TestCase):
         self.b1 = Multi3Keys(0,"abc",5)
         self.b2 = Multi3Keys(0,"abc",5)
     def testEq (self):
-        self.assert_ (self.a1.a == self.a2.a)
-        self.assert_ (self.a1 == self.a2)
-        self.assert_ (self.b1 == self.b2)
-        self.assert_ (self.a1 != self.a3)
+        self.assertTrue (self.a1.a == self.a2.a)
+        self.assertTrue (self.a1 == self.a2)
+        self.assertTrue (self.b1 == self.b2)
+        self.assertTrue (self.a1 != self.a3)
     def testHash (self):
-        self.assert_ (self.a1.__hash__() == self.a2.__hash__())
-        self.assert_ (self.a1.__hash__() != self.a3.__hash__()) # actually, hash collisions are possible
-        self.assert_ (self.b1.__hash__() == self.b2.__hash__())
+        self.assertTrue (self.a1.__hash__() == self.a2.__hash__())
+        self.assertTrue (self.a1.__hash__() != self.a3.__hash__()) # actually, hash collisions are possible
+        self.assertTrue (self.b1.__hash__() == self.b2.__hash__())
 
 def isAgeGroup(measure):
     if measure in set([7,9,21,25,26,28,29,31,32,33,34,35,36,39,40,47,48,49,50,51,54]):
@@ -114,11 +114,11 @@ class MeasureDict(object):
         except LookupError:
             return 1e1000 - 1e0000 # NaN
     def getGroups(self):
-        return range(0,self.nGroups)
+        return list(range(0,self.nGroups))
     def getCohorts(self):
-        return range(0,self.nCohorts)
+        return list(range(0,self.nCohorts))
     def getGenotypes(self):
-        return range(0,self.nGenotypes)
+        return list(range(0,self.nGenotypes))
 
 def stringIndexAllMatch(strs,ind,char):
     for s in strs:
@@ -144,7 +144,7 @@ class ValDict (object):
         def filterFun(f,m,s,g,c,gt):
             r=eval(filterExpr)
             if exprDebug:
-                print("f="+str(f),"m="+str(m),"s="+str(s),"g="+str(g),"c="+str(c),"g="+str(g)+":",r)
+                print(("f="+str(f),"m="+str(m),"s="+str(s),"g="+str(g),"c="+str(c),"g="+str(g)+":",r))
             return r
         aKS = Keys.SURVEY in self.aggregateKeys
         aKG = Keys.GROUP in self.aggregateKeys
@@ -156,10 +156,15 @@ class ValDict (object):
             self.files.append(fileName)
         else:
             fID = 0
-        fileObj = open(fileName, 'r')
+        
+        if type(fileName) == StringIO or type(fileName) == BytesIO:
+            fileObj = fileName
+        else:
+            #give the existing approach a shot
+            fileObj = open(fileName, 'r')
         nErrs=0
         for line in fileObj:
-            items=string.split(line)
+            items=line.split()
             if (len(items) != 4):
                 print("expected 4 items on line; found (following line):")
                 print(line)
@@ -171,9 +176,9 @@ class ValDict (object):
             m=int(items[2])
             s=int(items[0])
             g=int(items[1])
-            gt = g / 1000000 # genotype
+            gt = g // 1000000 # genotype
             g = g - 1000000*gt
-            c = g / 1000   # cohort
+            c = g // 1000   # cohort
             g = g - 1000*c
             if not filterFun(fileName,m,s,g,c,gt):
                 continue
@@ -194,7 +199,7 @@ class ValDict (object):
             self.values[m].add(s,g,c,gt,fID,robustFloat(items[3]))
     
     def getFiles(self):
-        return range(len(self.files))
+        return list(range(len(self.files)))
     def getFileName(self,n):
         return self.files[n]
     def getFileNames(self,replaceFN):
@@ -225,7 +230,7 @@ class ValDict (object):
         if m==21:
             return [1]
         else:
-            return range(1,self.nSurveys+1)
+            return list(range(1,self.nSurveys+1))
     def getAllGroups(self):
         groups=set()
         for x in self.values:
@@ -273,7 +278,7 @@ def readEntries (fname):
     values=dict()
     fileObj = open(fname, 'r')
     for line in fileObj:
-        items=string.split(line)
+        items=line.split()
         if (len(items) != 4):
             print("expected 4 items on line; found (following line):")
             print(line)

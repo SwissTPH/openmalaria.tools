@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of the openmalaria.tools package.
@@ -185,7 +185,7 @@ def getMeasureColour(mg, m):
 
 def ensureUnique(colour, used):
     if colour in used:
-        colours = cnames.keys()
+        colours = list(cnames.keys())
         i = 0
         while colours[i] != colour:
             i += 1
@@ -375,7 +375,7 @@ class Plotter(object):
                 else:
                     measureGroups[mg] = list([m])
             # note: here "measure" is used to represent "measure group"
-            MultiKey.expand(plots, MultiKey.fromMeasureGroups(measureGroups.keys()))
+            MultiKey.expand(plots, MultiKey.fromMeasureGroups(list(measureGroups.keys())))
         else:
             MultiKey.expand(plots, MultiKey.fromMeasures(self.values.getMeasures()))
         if s == "plot":
@@ -396,7 +396,8 @@ class Plotter(object):
         d1 = int(math.ceil(math.sqrt(float(n))))
         d2 = int(math.ceil(float(n) / float(d1)))
 
-        fig = plt.figure(1)
+        fig = plt.figure(1, figsize=(10,8))
+        plt.rcParams.update({'font.size': 6})
         plotNumber = 1
         for plot in plots:
             subplot = fig.add_subplot(d1, d2, plotNumber)
@@ -488,16 +489,16 @@ class Plotter(object):
                     colour = ensureUnique(getMeasureColour(pLine.mg, pLine.m), lineColours)
                     try:
                         plotted.append(subplot.plot(x, y, colour))
-                    except ValueError, e:
+                    except ValueError as e:
                         print("Bad plot values (script error):")
-                        print("x:", x)
-                        print("y:", y)
-                        print("colour:", colour)
+                        print(("x:", x))
+                        print(("y:", y))
+                        print(("colour:", colour))
 
                 if self.showLegends and (am or len(plotted) > 1):
                     plots = [p[0] for p in plotted]
                     legends = [pLine.label(plot, self.values) for pLine in pLines]
-                    subplot.legend(plots, legends, 'upper right')
+                    subplot.legend(legends, loc=1)
             else:  # one x-coord or non-numeric x-coords: draw a bar chart
                 plotted = list()
                 firstLine = None
@@ -558,11 +559,11 @@ class Plotter(object):
                                     ytop[i] += y[i]
                             xsubincr += subwidth
                             plotted.append(lastPlotted)
-                        except ValueError, e:
+                        except ValueError as e:
                             print("Bad plot values (script error):")
-                            print("x:", xind + xincr)
-                            print("y:", y)
-                            print("ytop:", ytop)
+                            print(("x:", xind + xincr))
+                            print(("y:", y))
+                            print(("ytop:", ytop))
 
                     if am:
                         message = pLine.label(plot, self.values)
@@ -591,7 +592,8 @@ class Plotter(object):
                 if self.showLegends and (am or len(plotted) > 1):
                     legends = [block.label(firstLine, self.values) for block in firstStack]
                     subplot.legend(plots, legends, 'upper right')
-
+        
+        plt.tight_layout()
         plt.show()
 
 
