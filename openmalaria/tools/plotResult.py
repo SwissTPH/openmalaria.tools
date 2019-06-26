@@ -99,7 +99,8 @@ measureNames = {
     75: 'expectedHospitalDeaths',
     76: 'expectedIndirectDeaths',
     77: 'expectedSequelae',
-    78: 'expectedNumSevere'
+    78: 'expectedNumSevere',
+    79: 'innoculationsPerVector'
 }
 
 # List of measure groups. Each includes name, boolean (true if use log scale),
@@ -127,7 +128,7 @@ combinedMeasures = [
     ('drug doses (MDA/MSAT)', [(25, 'IPT', 'brown'), (52, 'MDA (timed)', 'purple'), (59, 'MDA (cts)', 'pink')]),
     ('infant mortality rate', [(21, 'IMR', 'red')]),
     ('hospital recoveries', [(23, 'hospital recoveries', 'orange')]),
-    ('inoculations', [(30, 'all', 'red')]),
+    ('inoculations', [(30, 'by host', 'red'), (79, 'by species', 'yellow')]),
     ('feeding vectors', [(31, 'emergence - N_v0', 'green'), (32, 'all - N_v', 'blue'), (33, 'infected - O_v', 'purple'),
                          (34, 'infectious - S_v', 'red')]),
     ('EIR (innocs/pers/year)', [(35, 'requested', 'orange'), (36, 'simulated', 'red')]),
@@ -591,7 +592,7 @@ class Plotter(object):
 
                 if self.showLegends and (am or len(plotted) > 1):
                     legends = [block.label(firstLine, self.values) for block in firstStack]
-                    subplot.legend(plots, legends, 'upper right')
+                    subplot.legend(plots, legends)
         
         plt.tight_layout()
         plt.show()
