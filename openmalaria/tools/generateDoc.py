@@ -652,6 +652,7 @@ def main():
         help='Split output into multiple files. The exact split is hard-coded.')
     parser.add_argument('-i','--index', action='store_true',
         help='Generate an index')
+    parser.add_argument('--mdbook', action='store_true', help='Generate SUMMARY.md for mdbook')
     parser.add_argument('-O','--out-dir', metavar='OUTDIR', action='store',
         help='Directory to output to. If not given the current directory is used.')
     parser.add_argument('-d','--develop', metavar='COMMIT' ,action='store',
@@ -694,6 +695,31 @@ def main():
             #TODO: instead of linking generated doc, we should search for everything matching schema-*.md
             for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[0].split('-')))), reverse=True):
                 w.bulleted(w.link(link, None, 'Documentation for '+schema))
+            w.finish()
+    
+    if args.mdbook:
+        path=os.path.join(out_dir, 'intro.md')
+        print('Writing',path)
+        with open(path, 'w') as f_out:
+            w = DocWriter(f_out)
+            w.heading(1, 'Schema Documentation')
+            w.p('This site displays OpenMalaria schema documentation in an easy-to-read form.')
+            w.p('You may wish to refer to:')
+            w.bulleted(w.link('https://github.com/SwissTPH/openmalaria/wiki', None, 'OpenMalaria wiki'))
+            w.bulleted(w.link('https://github.com/SwissTPH/openmalaria', None, 'OpenMalaria repository'))
+            w.pn('')
+            w.p('This documentation was automatically generated from OpenMalaria schema (XSD) files.')
+            w.p('It is automatically kept up to date with schema files in the master branch of the repository.')
+            w.finish()
+        
+        path=os.path.join(out_dir, 'SUMMARY.md')
+        print('Writing',path)
+        with open(path, 'w') as f_out:
+            w = DocWriter(f_out)
+            w.line(w.link('intro.md', None, 'Introduction'))
+            w.pn('')
+            for link, schema in sorted(generated, key = (lambda v: list(map(maybe_to_int, v[0].split('-')))), reverse=True):
+                w.bulleted(w.link(link + '.md', None, schema))
             w.finish()
 
 if __name__ == "__main__":
