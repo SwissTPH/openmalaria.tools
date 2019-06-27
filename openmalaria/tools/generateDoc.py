@@ -25,11 +25,11 @@ DM_LIST = 3
 DM_CODE = 4
 
 class DocElts:
-    def __init__(self, schema_file, ver):
+    def __init__(self, schema_file, ver, split):
         self.schema_file = schema_file
         self.ver = ver
         self.docname = 'schema-' + ver
-        self.subdocs = { 'interventions' : self.docname + '-intervs', 'human' : self.docname + '-human' }
+        self.subdocs = { 'interventions' : self.docname + '-intervs', 'human' : self.docname + '-human' } if split else {}
         self.elements = []
         self.links = set()
     """Get the document name"""
@@ -573,7 +573,7 @@ class FixedAttribute:
     def writedoc(self, w):
         pass
 
-def translate(in_path, out_dir, schema_name, ver, commit=None):
+def translate(in_path, out_dir, schema_name, ver, split, commit=None):
     global nsmap
     
     # Read document:
@@ -626,7 +626,7 @@ def translate(in_path, out_dir, schema_name, ver, commit=None):
             'xsi:schemaLocation="http://openmalaria.org/schema/scenario_'+ver+' '+schema_name+'"'))
     
     # Collect all linked elements into a list, by order visited:
-    doc = DocElts(schema_name, ver)
+    doc = DocElts(schema_name, ver, split)
     omroot.collect_elements(doc, stypes, None)
     
     # Write tthe output:
@@ -672,12 +672,13 @@ def main():
         ver = str(m.group(1)).replace('_', '-')
         
         print('Translating', in_path, file=sys.stderr)
-        out_name = translate(in_path, out_dir, in_name, ver, commit=args.develop)
+        out_name = translate(in_path, out_dir, in_name, ver, args.split, commit=args.develop)
         generated.append((out_name, in_name))
     
     if args.index:
-        # Generate an index:
-        with open(os.path.join(out_dir, 'schema-index.md'), 'w') as f_out:
+        path = os.path.join(out_dir, 'schema-index.md')
+        print('Writing',path)
+        with open(path, 'w') as f_out:
             w = DocWriter(f_out)
             w.heading(1, 'Generated Schema Documentation')
             w.p('This documentation was automatically generated from OpenMalaria schema (XSD) files.')
