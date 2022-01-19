@@ -328,7 +328,7 @@ class Translator:
         """
         vivax = self.root.find('model').find('vivax')
         for child in vivax:
-            if child.tag == 'hypnozoiteReleaseDelayDays'
+            if child.tag == 'hypnozoiteReleaseDelayDays':
                 # Translate hynpozoiteReleaseDelayDays into hypnozoiteRelease
                 mu = child.get('mu')
                 sigma = child.get('sigma')
@@ -337,7 +337,7 @@ class Translator:
                 # create new hypnozoiteRelease element from attributes
                 h = ET.Element('hypnozoiteRelease',{'latentRelapseDays':min})
                 h.append(vivax.find('numberHypnozoites'))
-                h.append(ET.Element('firstRelease',{'mu':mu,'sigma':sigma})
+                h.append(ET.Element('firstRelease',{'mu':mu,'sigma':sigma}))
                 vivax.insert(1,h)
                 vivax.remove(child)
     
@@ -467,7 +467,7 @@ FROM scenarios s JOIN parameterizations p ON s.run_id=p.run_id"""
             translator = Translator(text=xml,interval=row[2])
             translator.update(args)
             changed.append((row[0],row[1],translator.to_string()))
-        except DocumentError,e:
+        except DocumentError as e:
             for line in e.lines:
                 print('Error:',line)
             nErrors += 1
@@ -496,7 +496,7 @@ def updateFiles(args):
                 path = os.path.join(args.dest, os.path.basename(f_path))
                 with open(path, 'w') as f:
                     translator.write_to(f)
-        except DocumentError,e:
+        except DocumentError as e:
             for line in e.lines:
                 print('Error:',line)
 
